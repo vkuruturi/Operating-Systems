@@ -1,8 +1,2 @@
-*
-!*.c
-!*.ps
-!.gitignore
-!*.pdf
-!*.txt
-!*.sh
-
+**/*.exe*
+**/.DS*
