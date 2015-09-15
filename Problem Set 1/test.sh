@@ -1,6 +1,6 @@
 #!/bin/bash
 #Script to test copycat with different buffer sizes.  
-for i in `seq 1 10`;
+for i in `seq 1 17`;
 do
 	let 'z = 2**i'
 	#echo $z
