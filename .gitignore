@@ -1,0 +1,7 @@
+!.gitignore
+!*.c
+!*.pdf
+!*.ps
+!Makefile
+!*.txt
+*
