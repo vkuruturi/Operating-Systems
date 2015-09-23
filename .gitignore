@@ -1,7 +1,3 @@
-!.gitignore
-!*.c
-!*.pdf
-!*.ps
-!Makefile
-!*.txt
-*
+
+**/*.exe*
+**/.DS*

@@ -1,0 +1,1 @@
+openssl rand -out sample.txt -base64 $(( 2**25 * 3/4 ))

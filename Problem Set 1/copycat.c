@@ -26,7 +26,7 @@ int cat(const int fd_out,const int fd_in, char* buffer, size_t buffersize){
 				if(n < 0){
 					fprintf(stderr, "Can't write to output file %d: %s", fd_out, strerror(errno));
 					return -1;
-				}
+				} 
 				write_length += n;
 			}
 		}
@@ -53,15 +53,11 @@ int main(int argc, char **argv){
 	int bo_count=0;
 
 	//PARSE INPUT ARGUMENTS. If multiple arguments for buffer size and output file are specified, throw error
-	printf("Parsing input arguments...\n");
 	for(int i = 1; i < argc-1; i++){
 		//Check for buffer size in arguments
 		if((strcmp("-b",argv[i]) == 0) || (strcmp("-B", argv[i]) == 0)){
-			printf("found buffersize: %s\n", argv[i+1]);
 			if(b_loc == -1){
-				printf("%d\n", (int)strlen(argv[i+1]));
 				if((buffersize = atoi(argv[i+1]) % ((int) pow(10,strlen(argv[i+1])))) ==0 ){
-					printf("Invalid input arguments.  Buffer size must be a number greater than 0.\n");
 					close_program(fd_out, fd_in, buffer);
 					return -1;
 				}
@@ -75,7 +71,6 @@ int main(int argc, char **argv){
 		}
 		//Check for output file name in arguments and open it.
 		if((strcmp("-o",argv[i]) == 0) || (strcmp("-O", argv[i]) == 0)){
-			printf("found output file name: %s\n", argv[i+1]);
 			if( o_loc == -1){
 				o_loc = i;
 				bo_count += 2;
@@ -95,13 +90,11 @@ int main(int argc, char **argv){
 			}
 		}
 	}
-	printf("allocating buffer\n");
     if ((buffer = (char*)malloc(buffersize)) == 0){
         fprintf(stderr, "Could not allocate %zu bytes of data to buffer size with malloc", buffersize);
         return -1;
     }
-
-	if(argc ==1 || argc == bo_count +1){
+	if(argc == 1 || (argc == bo_count +1)){
 		if (cat(fd_out, fd_in, buffer, buffersize) == -1){
 			close_program(fd_out, fd_in, buffer);
 			return -1;
@@ -109,11 +102,17 @@ int main(int argc, char **argv){
 		else return EXIT_SUCCESS;
 	}
 	else{
-		for(int i = 1; i< argc; i++){
+		for(int i = 1; i < argc; i++){
 			if (i== b_loc || i == o_loc)
 				i++;
+			else if(strcmp("-", argv[i]) == 0){
+				if(cat(fd_out,STDIN_FILENO,buffer, buffersize) == -1){
+					close_program(fd_out,STDIN_FILENO,buffer);
+					return -1;
+				}
+			}
 			else{
-				if(fd_out = open(argv[i+1], O_RDONLY) < 0){
+				if((fd_in = open(argv[i], O_RDONLY)) < 0){
                     if (errno == ENOENT)
                         fprintf(stderr, "Sorry, %s does not appear to be the name of a valid file.\n", argv[i]);
                     else
@@ -121,6 +120,7 @@ int main(int argc, char **argv){
                     close_program(fd_out, fd_in, buffer);
                     return -1;
 				}
+
 				if (cat(fd_out, fd_in, buffer, buffersize) == -1){
 					close_program(fd_out, fd_in, buffer);
 					return -1;
