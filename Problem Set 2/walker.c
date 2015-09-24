@@ -1,8 +1,10 @@
-//Venkat Kuruturi
-//walker.c
-//Operating Systems
-//Prof. Hakner
+/*Venkat Kuruturi
+walker.c
+Operating Systems
+Prof. Hakner
 
+Compiled using the gnu99 standard because lstat
+*/
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -14,88 +16,176 @@
 #include <pwd.h>	//for passwd struct
 #include <grp.h>    //for group struct
 #include <string.h>	//for stringcmp
+#include <getopt.h>
 
 int filetype(mode_t st_mode){
    char    c;
 
-    if (S_ISREG(st_mode))		//
-        c = '-';
-    else if (S_ISDIR(st_mode))	//
-        c = 'd';
-    else if (S_ISBLK(st_mode))	//
-        c = 'b';
-    else if (S_ISCHR(st_mode))
-        c = 'c';
-	#ifdef S_ISFIFO
-    else if (st_S_ISFIFO(st_mode))
-        c = 'p';
-	#endif  /* S_ISFIFO */
-	#ifdef S_ISLNK
-    else if (st_S_ISLNK(st_mode))
-        c = 'l';
-	#endif  /* S_ISLNK */
-	#ifdef S_ISSOCK
-    else if (S_ISSOCK(st_mode))
-        c = 's';
-	#endif  /* S_ISSOCK */
-	#ifdef S_ISDOOR
-    /* Solaris 2.6, etc. */
-    else if (S_ISDOOR(st_mode))
-        c = 'D';
-	#endif  /* S_ISDOOR */
-    else
+    switch (st_mode & S_IFMT)
     {
-        /* Unknown type -- possibly a regular file? */
-        c = '?';
+        case S_IFREG:
+            c = '-';
+            break;
+        case S_IFDIR:
+            c = 'd';
+            break;
+        case S_IFCHR:
+            c = 'c';
+            break;
+        case S_IFBLK:
+            c = 'b';
+            break;
+        case S_IFLNK:
+            c = 'l';
+            break;
+        case S_IFSOCK:
+            c = 's';
+            break;
+        case S_IFIFO:
+            c = 'p';
+            break;
+        default:
+        	c = '?'; 	// unknown filetype
+        	break;
     }
-    return(c);
+    return c;
 }
 
 char* readPermissions(mode_t st_mode){
 	int i = 0;
-    static const char *rwx[] = {"---", "--x", "-w-", "-wx",
-    	"r--", "r-x", "rw-", "rwx"};
+    static const char *rwx[] = {"---", "--x", "-w-", "-wx", "r--", "r-x", "rw-", "rwx"};
 
 	static char perm[11];
 	perm[10] = '\0';
+	char *pc = perm;
 
     perm[0] = filetype(st_mode);
     strcpy(&perm[1], rwx[(st_mode >> 6)& 7]);
     strcpy(&perm[4], rwx[(st_mode >> 3)& 7]);
     strcpy(&perm[7], rwx[(st_mode & 7)]);
-    if (mode & S_ISUID)
+    if (st_mode & S_ISUID)
         perm[3] = (st_mode & S_IXUSR) ? 's' : 'S';
-    if (mode & S_ISGID)
-        perm[6] = (st_mode & S_IXGRP) ? 's' : 'l';
-    if (mode & S_ISVTX)
+    if (st_mode & S_ISGID)
+        perm[6] = (st_mode & S_IXGRP) ? 's' : 'S';
+    if (st_mode & S_ISVTX)
         perm[9] = (st_mode & S_IXUSR) ? 't' : 'T';
 
+    return pc;
+}
+
+char* getLink(char *path, struct stat *st){
+	char* symLink[1024];	//malloc size of path of symlink, + 1 for \0
+	if(symLink == NULL){
+		fprintf(stderr, "malloc failed to allocate symLink string.");
+		exit(EXIT_FAILURE);
+	}
+	int r = readlink(path, symLink, st->st_size + 1);
+	if(r<0){
+		fprintf(stderr,"readLink() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	*(symLink + r) = '\0';
+	return symLink;
 }
 
 int output(char *path, struct stat *st, char *user, int mtime){
-	int index = 0;
 	struct passwd *pw = getpwuid(st->st_uid);
+	//first if statement: if no user is defined, or if user matches owner name or uid
 	if(!(user) || (strcmp(user, pw->pw_name) ==0) || (atoi(user) == st->st_uid)){
+		//and if mtime isn't difined or if it is defined and the file is in range, print info
 		if((mtime == 0) || ((mtime < 0) && (difftime(time(NULL), st->st_ctime) < (-mtime))) || ((mtime > 0) && (difftime(time(NULL), st->st_ctime) > mtime))){
-			printf("%04x/", st->st_dev);	//device driver printed as hex with 4 digits min
-			printf("%-7i ", st->st_ino);	//inode number
-			printf("%s ", readPermissions(st->st_mode));
+			printf("%04x/", st->st_dev);				//device driver printed as hex with 4 digits min
+			printf("%-7i ", st->st_ino);				//inode number
+			printf("%s ", readPermissions(st->st_mode));//permissions
+			printf("%2i", st->st_nlink);
+			if (printf("%10s ", pw->pw_name) <= 0)		//try to print user name
+				printf("%10i ", pw->pw_uid);			//if it fails, print uid
+			struct group *grp = getgrgid(st->st_gid);
+			if(!grp){
+				perror("getgrgid failed.");
+				return -1;
+			}
+			if (printf("%5s ", grp->gr_name) <= 0)		//try to print group name
+				printf("%5i ", grp->gr_gid);			//if it fails, print gid
+			if (((st->st_mode & S_IFMT) == S_IFCHR) || ((st->st_mode & S_IFMT) == S_IFBLK))
+				printf("%10x ", st->st_rdev);			//print device id
+			else
+				printf("%10i ", st->st_size);			//print size
+
+			printf("%s ", ctime(&(st->st_mtime)));
+			printf("%s ", path);
+
+			if ((st->st_mode & S_IFMT) == S_IFLNK)
+				printf("-> %s", getLink(path, st));
+			printf("\n");
+			return 0;
 		}
 	}
+	return 0;
+}
+
+int ls(char *path, struct stat *st, char *user, int mtime){
+	DIR *dirp;
+	struct dirent *d;
+	if(output(path,st, user, mtime) == -1)
+		return -1;
+	if((dirp = opendir(path)) == NULL){
+		fprintf(stderr, "Unable to open directory at path %s: %s\n",path, strerror(errno));
+		return -1;
+	}
+	while(d = readdir(dirp)){
+		//if name = "." or "..", ignore because that would lead to infinite loop
+		if(strcmp(".", d->d_name) && strcmp("..", d->d_name)){
+			struct stat st_new;
+			char *fullpath = malloc(sizeof(path) +sizeof(d->d_name) + 2);	//size = current dir length + name length + / + \0
+		
+			if(fullpath == NULL){
+				fprintf(stderr, "Malloc failed to allocate space for path variable");
+				free(fullpath);
+				return -1;
+			}
+			sprintf(fullpath, "%s/%s",path, d->d_name);
+			if(lstat(fullpath, &st_new) == -1){
+				perror("Error using lstat.");
+				free(fullpath);
+				return -1;
+			}
+			if((st_new.st_mode & S_IFMT) == S_IFDIR){
+				if(ls(fullpath,&st_new,user,mtime) == -1){
+				free(fullpath);
+					return -1;
+				}
+			}
+			else{
+				if(output(fullpath,&st_new,user,mtime) == -1){
+					free(fullpath);
+					return -1;
+				}
+			}
+			free(fullpath);
+		}
+
+	}
+	if(closedir(dirp) == -1){
+		perror("error using closedir.");
+		return -1;
+	}
+	return  0;
 }
 
 int main(int argc, char* argv[]){
 	char *user = NULL;		//username
 	int mtime = 0;			//modified filter				
-
+	char ch;
 	//parse input arguments for -u, -m and their following arguments
-	while(char ch = getopt(argc, argv, "u:m") != -1){
+	while((ch = getopt(argc, argv, "u:m")) != -1){
 		switch(ch){
 			case 'u':
 				user = malloc(sizeof(optarg));
 				if(user == NULL){
 					fprintf(stderr, "-u: Missing username.\n");
-					return 1;
+					return EXIT_FAILURE;
 				}
 				strcpy(user,optarg);
 				break;
@@ -103,7 +193,7 @@ int main(int argc, char* argv[]){
 				mtime = atoi(optarg);
 				if(mtime == 0){
 					fprintf(stderr, "-m: Invalid input for mtime.  Must be a number greater than 0\n");
-					return 1;
+					return EXIT_FAILURE;
 				}
 				break;
 		}
@@ -111,15 +201,23 @@ int main(int argc, char* argv[]){
 	//check if path is specified
 	if(argc == optind){
 		fprintf(stderr, "Missing path\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	struct stat st;
 	if(lstat(argv[optind], &st) == -1){
 		perror("Initial lstat");
-		return 1;
+		return EXIT_FAILURE;
 	}
-
-	if((st.st_mode &S_IFMT) == S_IFLNK)
-		output(argv[optind], &st, user, mtime)
+	//if node is a symbolic link, do not dereference link. just print info
+	if((st.st_mode & S_IFMT) == S_IFLNK){
+		if(output(argv[optind], &st, user, mtime)){
+			return EXIT_FAILURE;
+		}
+	}
+	else{	//walk through
+		if(ls(argv[optind], &st, user, mtime))
+			return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
 }
