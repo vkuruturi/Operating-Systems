@@ -18,39 +18,40 @@ Compiled using the gnu99 standard because lstat
 #include <string.h>	//for stringcmp
 #include <getopt.h>
 
-int filetype(mode_t st_mode){
-   char    c;
-
+//function to determine filetype
+char filetype(mode_t st_mode){
+   char c;
     switch (st_mode & S_IFMT)
     {
         case S_IFREG:
-            c = '-';
+            c = '-';		//regular file
             break;
         case S_IFDIR:
-            c = 'd';
+            c = 'd';		//directory
             break;
         case S_IFCHR:
-            c = 'c';
+            c = 'c';		//character file
             break;
         case S_IFBLK:
-            c = 'b';
+            c = 'b';		//block file
             break;
         case S_IFLNK:
-            c = 'l';
+            c = 'l';		//symbolic link
             break;
         case S_IFSOCK:
-            c = 's';
+            c = 's';		//network socket
             break;
         case S_IFIFO:
-            c = 'p';
+            c = 'p';		//fifo
             break;
         default:
-        	c = '?'; 	// unknown filetype
+        	c = '?'; 		// unknown filetype
         	break;
     }
     return c;
 }
 
+//read permissions of the node
 char* readPermissions(mode_t st_mode){
 	int i = 0;
     static const char *rwx[] = {"---", "--x", "-w-", "-wx", "r--", "r-x", "rw-", "rwx"};
@@ -73,8 +74,10 @@ char* readPermissions(mode_t st_mode){
     return pc;
 }
 
+//use readLink to dereference symbolic link
 char* getLink(char *path, struct stat *st){
-	char* symLink[1024];	//malloc size of path of symlink, + 1 for \0
+	char symLink[4096];
+	char *pc = symLink;	
 	if(symLink == NULL){
 		fprintf(stderr, "malloc failed to allocate symLink string.");
 		exit(EXIT_FAILURE);
@@ -85,10 +88,11 @@ char* getLink(char *path, struct stat *st){
 		exit(EXIT_FAILURE);
 	}
 
-	*(symLink + r) = '\0';
-	return symLink;
+	symLink[r] = '\0';
+	return pc;
 }
 
+//print out info
 int output(char *path, struct stat *st, char *user, int mtime){
 	struct passwd *pw = getpwuid(st->st_uid);
 	//first if statement: if no user is defined, or if user matches owner name or uid
@@ -113,9 +117,9 @@ int output(char *path, struct stat *st, char *user, int mtime){
 			else
 				printf("%10i ", st->st_size);			//print size
 
-			printf("%s ", ctime(&(st->st_mtime)));
-			printf("%s ", path);
-
+			printf("%s ", ctime(&(st->st_mtime)));		//modified time
+			printf("%s ", path);						//path of the file
+			//if the node is a symlink, then display what it's linked to
 			if ((st->st_mode & S_IFMT) == S_IFLNK)
 				printf("-> %s", getLink(path, st));
 			printf("\n");
@@ -179,7 +183,7 @@ int main(int argc, char* argv[]){
 	int mtime = 0;			//modified filter				
 	char ch;
 	//parse input arguments for -u, -m and their following arguments
-	while((ch = getopt(argc, argv, "u:m")) != -1){
+	while((ch = getopt(argc, argv, "u:m:")) != -1){
 		switch(ch){
 			case 'u':
 				user = malloc(sizeof(optarg));
