@@ -1,8 +1,0 @@
-total 52
-566173 drwxrwxr-x 2 vkuruturi vkuruturi  4096 Oct  2 21:20 .
-524909 drwxrwxr-x 6 vkuruturi vkuruturi  4096 Oct  2 17:21 ..
-566174 -rwxrwxr-x 1 vkuruturi vkuruturi 14084 Oct  2 21:14 a.out
-566191 -rw-rw-r-- 1 vkuruturi vkuruturi     0 Oct  2 21:20 ls2.out
-566190 -rw-rw-r-- 1 vkuruturi vkuruturi   788 Oct  2 21:19 ls.out
-566188 -rwxrwxr-x 1 vkuruturi vkuruturi 14134 Oct  2 21:15 mysh
-554375 -rw-rw-rw- 1 vkuruturi vkuruturi  5559 Oct  2 21:14 shell.c
