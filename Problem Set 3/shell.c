@@ -92,25 +92,21 @@ void mygetline(){
     line[i] = '\0';
 
     my_argv[0] = strtok(line, " \t");
-    printf("%s ", my_argv[0]);
     my_argc = 1;
     numrs = 0;
     my_argv[my_argc] = strtok(NULL, " \t");
-    printf("%s ", my_argv[my_argc]);
+
 
     //add all arguments to my_argv until the first argument
     //with a redirect operator is encountered
     while ( (my_argv[my_argc]) != NULL && redirect_check(my_argv[my_argc]) == 0){
 		++my_argc;
 		my_argv[my_argc] = strtok(NULL, " \t");
-		printf("%s ", my_argv[my_argc]);
 	}
-	printf("\n\n");
+
 	//add redirect operator arguments to my_argv1
     if (my_argv[my_argc] != NULL && redirect_check(my_argv[my_argc]) != 0){
         my_argv1[numrs] = my_argv[my_argc];
-        printf("%s ", my_argv[my_argc]);
-        printf("%s ", my_argv1[numrs]);
         my_argv[my_argc] = NULL;
         ++numrs;
         my_argv1[numrs] = strtok(NULL, " \t");
@@ -132,8 +128,10 @@ void printProcessInfo(){
 		if(gettimeofday(&end, NULL) <0)
 			perror("end gettimeofday");
 
-		printf("Executing command %s with arguments", my_argv[0]);
-		for(int i =1 ; i != my_argc; i++)
+		printf("Executing command %s", my_argv[0]);
+		if(my_argc > 1)
+			printf(" with arguments");
+		for(int i =1 ; i < my_argc; i++)
 			printf(" \"%s\"", my_argv[i]);
 		printf("\n");
 
@@ -149,11 +147,11 @@ void printProcessInfo(){
 			microseconds += 1000000;
 		seconds = end.tv_sec - start.tv_sec;
 
-		printf("consuming %1u.%.6u real seconds, %1u.%.6u user, %1u.%.6u system\n",
-            end.tv_sec - start.tv_sec,
-            end.tv_usec - start.tv_usec,
-            ru.ru_utime.tv_sec, ru.ru_utime.tv_usec,
-            ru.ru_stime.tv_sec, ru.ru_stime.tv_usec);
+		printf("consuming %1lld.%.6lld real seconds, %1lld.%.6lld user, %1lld.%.6lld system\n",
+            (long long)(end.tv_sec - start.tv_sec),
+            (long long)(end.tv_usec - start.tv_usec),
+            (long long)ru.ru_utime.tv_sec, (long long)ru.ru_utime.tv_usec,
+            (long long)ru.ru_stime.tv_sec, (long long)ru.ru_stime.tv_usec);
 	}
 }
 
@@ -179,7 +177,8 @@ void redirect(char *pathname, int stream, int redirect_type){
 	}
 
 	if(close(fd) <0){
-		perror("error closing fd");
+		fprintf(stderr, "Error closing fd to file %s:", pathname);
+		perror("");
 		exit(1);
 	}
 }
@@ -192,6 +191,7 @@ int do_command(){
 		exit(1);
 	}
 
+	//actions to be performed in child process
 	if(pid == 0){
 		int i;
 
@@ -243,6 +243,7 @@ int do_command(){
 		exit(1);
 	}
 
+	// in parent process
 	if(pid != 0)
 		printProcessInfo();
 	return 0;
@@ -257,12 +258,15 @@ int main(int argc, char* argv[]){
 	}
 
 	while(1){
+		
 		if(!scriptBool)
 			printf("$ ");
-		printf("gettingline\n");
+		
 		mygetline();
+		//ignore line if it starts with # or if it is empty
 		if(!(my_argv[0] == NULL || compare(my_argv[0], "#")))
 			do_command();
+		
 		if (reachedEOF){
 			printf("\n");
 			return 0;
