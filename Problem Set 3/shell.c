@@ -38,16 +38,17 @@ void chop_char(char *str, size_t s){
 
 //compare 2 strings.  return 2 if they match exactly
 //return 1 if sym matches the str's frist characters
+//eg. ">fname" compared with ">" returns 1
 // return 0 if if sym does not match with str
 int compare(const char *str,const char *sym){
-	for( ; *str == *sym; str++, sym++){
+	while(*str == *sym){
 		if(*sym == '\0')
 			return 2;
+		str++;
+		sym++;
 	}
-
 	if( *sym == '\0')
 		return 1;
-	
 	return 0;
 }
 
@@ -68,18 +69,24 @@ int redirect_check(const char *str){
 	return 0;
 }
 
+//reads one line from stream 0.  parses it into normal args and redirection args
+//normal args are stored in my_argv, redirection args are stored in my_argv1
 void mygetline(){
 	int i;
-	//read fd 0 until a newline char is encountered or more than MAX_LEN
-	//characters have been read
+	//read stream 0 until a newline char is encountered or more than MAX_LEN
+	//characters have been read.  If EOF is read, exit if not a script, or break
+	//from loop if it is a script
 	for (i = 0;(i != MAX_LEN) && (line[i]=getchar())!='\n'; i++){
         if (line[i] == EOF){
+
+        	//if processing a script, break from for loop and process last line
         	if (scriptBool){
         		reachedEOF = 1;
         		break;
         	}
+        	//if not a script, exit
         	else{
-        		printf("\n");
+        		printf("exiting...\n");
         		exit(0);
         	}
         }
@@ -91,6 +98,7 @@ void mygetline(){
     }
     line[i] = '\0';
 
+    //break each word into it's own string
     my_argv[0] = strtok(line, " \t");
     my_argc = 1;
     numrs = 0;
@@ -104,7 +112,7 @@ void mygetline(){
 		my_argv[my_argc] = strtok(NULL, " \t");
 	}
 
-	//add redirect operator arguments to my_argv1
+	//add redirect operator arguments to my_argv1, 
     if (my_argv[my_argc] != NULL && redirect_check(my_argv[my_argc]) != 0){
         my_argv1[numrs] = my_argv[my_argc];
         my_argv[my_argc] = NULL;
@@ -118,6 +126,8 @@ void mygetline(){
     }
 }
 
+
+//prints info about the child process
 void printProcessInfo(){
 	struct rusage ru;
 	int status;
@@ -128,20 +138,15 @@ void printProcessInfo(){
 		if(gettimeofday(&end, NULL) <0)
 			perror("end gettimeofday");
 
-		printf("Executing command %s", my_argv[0]);
-		if(my_argc > 1)
-			printf(" with arguments");
-		for(int i =1 ; i < my_argc; i++)
-			printf(" \"%s\"", my_argv[i]);
-		printf("\n");
-
-		if(status !=0){
-			if(WIFSIGNALED(status))
-				printf("Exited with signal %d\n", WTERMSIG(status));
-			else
-				printf("Exited with return code %d,\n", WEXITSTATUS(status));
-		}
-
+		if (WIFEXITED(status))
+        	printf("exited with return code %d\n", WEXITSTATUS(status));
+        else if (WIFSIGNALED(status))
+        	printf("killed by signal %d\n", WTERMSIG(status));
+        else if (WIFSTOPPED(status))
+            printf("stopped by signal %d\n", WSTOPSIG(status));
+        else if (WIFCONTINUED(status))
+            printf("continued\n");
+        
 		int seconds, microseconds;
 		if((microseconds = end.tv_usec - start.tv_usec)<0)
 			microseconds += 1000000;
@@ -155,6 +160,8 @@ void printProcessInfo(){
 	}
 }
 
+//function to redirect streams.
+//redirect type 0 -> '<', type 1 -> '>', type 2 -> '>>'
 void redirect(char *pathname, int stream, int redirect_type){
 	int fd;
 	if (redirect_type == 0)			// <
@@ -163,6 +170,7 @@ void redirect(char *pathname, int stream, int redirect_type){
 		fd = open(pathname, O_WRONLY|O_CREAT|O_TRUNC, 0666);
 	else if (redirect_type == 2)	// >>
 		fd = open(pathname, O_WRONLY|O_CREAT|O_APPEND, 0666);
+	
 	if(fd<0){
 		fprintf(stderr, "Can't open file %s.", pathname);
 		perror("");
@@ -183,14 +191,24 @@ void redirect(char *pathname, int stream, int redirect_type){
 	}
 }
 
+//processes command by forking, redirecting i/o in the child process,
+//and using execvp in the child process 
 int do_command(){
+	
+	printf("Executing command %s", my_argv[0]);
+	if(my_argc > 1)
+		printf(" with arguments");
+	for(int i =1 ; i < my_argc; i++)
+		printf(" \"%s\"", my_argv[i]);
+	printf("\n");
+
 	if(gettimeofday(&start, NULL) <0)
 		perror("start gettimeofday");
 	if((pid = fork()) == -1){
 		perror("Fork ");
 		exit(1);
 	}
-
+	
 	//actions to be performed in child process
 	if(pid == 0){
 		int i;
@@ -238,12 +256,13 @@ int do_command(){
 				}
 			}
 		}
+		
 		execvp(my_argv[0], my_argv);
 		perror("execvp");
 		exit(1);
 	}
 
-	// in parent process
+	//actions to be performed in parent process
 	if(pid != 0)
 		printProcessInfo();
 	return 0;
@@ -268,7 +287,7 @@ int main(int argc, char* argv[]){
 			do_command();
 		
 		if (reachedEOF){
-			printf("\n");
+			printf("end of file\n");
 			return 0;
 		}
 	}

@@ -1,0 +1,11 @@
+ls_file.txt
+mysh
+shell.c
+test.sh
+
+404857 .
+277686 ..
+399219 ls_file.txt
+397548 mysh
+404876 shell.c
+398279 test.sh
