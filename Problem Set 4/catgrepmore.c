@@ -30,8 +30,7 @@ void sigint_handler(int sig){
 
 int cat(int infd, int outfd){
 	int n = 0, length = 0, w_length;
-	char *buff = &buffer[0];
-    while ((length = read(infd, buff, buffsz)) != 0){
+    while ((length = read(infd, buffer, buffsz)) != 0){
         if (length < 0){
             fprintf(stderr, "Error reading input: %s\n", strerror(errno));
             return -1;
@@ -39,7 +38,7 @@ int cat(int infd, int outfd){
         else{
             w_length = 0;
             while (w_length < length){
-                n = write(outfd, buff+w_length, length-w_length);
+                n = write(outfd, buffer+w_length, length-w_length);
                 bytes_processed += n;
                 w_length += n;
             }
@@ -148,8 +147,8 @@ void process_file(char *pattern,char *pathname){
 }
 
 int main(int argc, char* argv[]){
-	signal(SIGPIPE, sigpipe_handler);
-	signal(SIGINT, SIG_IGN);
+	signal(SIGPIPE, SIG_IGN);
+	signal(SIGINT, sigint_handler);
 	
 	if(argc < 3){
 		fprintf(stderr,"Not enough arguments.\n");
