@@ -12,6 +12,7 @@ int tas(volatile char *lock);
 void sigusr1_handler(int sig){
 	return;
 }
+
 void sem_init(struct sem *s, int count){
 	s->count = count;
 	s->lock  = 0;
@@ -20,7 +21,6 @@ void sem_init(struct sem *s, int count){
 		s->proc_status[i] = 0;
 		s->procID[i] = 0;
 	}
-	return;
 }
 
 int sem_try(struct sem *s){
