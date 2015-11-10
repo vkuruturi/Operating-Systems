@@ -11,14 +11,14 @@
 #include <unistd.h>
 #include <signal.h>
 
-extern int tas(int *lock);
+extern int tas(volatile char *lock);
 pid_t pid1 = 0;
 pid_t pid2 = 0;
 int tries = 0;
 
 struct test{
 	unsigned long long var;
-	int lock;
+	char lock;
 };
 struct test *t;
 
