@@ -17,33 +17,34 @@ void sem_init(struct sem *s, int count){
 	s->count = count;
 	s->lock  = 0;
 
-	for(int i = 0; i < N_PROC; i++){
+	int i;
+	for(i = 0; i < N_PROC; i++){
 		s->proc_status[i] = 0;
 		s->procID[i] = 0;
 	}
 }
 
 int sem_try(struct sem *s){
-	while(tas(s->lock));
+	while(tas(&(s->lock)));
 	if(s->count > 0){
 		s->count--;
 		s->lock = 0;
 		return 1;
 	}
-	s->lock - 0;
+	s->lock = 0;
 	return 0;
 }
 
 void sem_wait(struct sem *s){
 	s->procID[proc_num] = getpid();
 	while(1){
-		while(tas(s->lock));
+		while(tas(&(s->lock)));
 		signal(SIGUSR1, sigusr1_handler);
 		sigset_t mask, old_mask;
 		sigfillset(&mask);
 		sigdelset(&mask, SIGINT);
 		sigdelset(&mask, SIGUSR1);
-		sigprocmask(SIG_BLOCK, &mask, &oldmask);
+		sigprocmask(SIG_BLOCK, &mask, &old_mask);
 
 		if(s->count > 0){
 			s->count--;
@@ -63,12 +64,13 @@ void sem_wait(struct sem *s){
 
 void sem_inc(struct sem *s){
 
-	while(tas(s->lock));
+	while(tas(&(s->lock)));
 	s->count++;
 
-	for(int i = 0; i < N_PROC; i++){
+	int i;
+	for(i = 0; i < N_PROC; i++){
 		if(s->proc_status[i]){
-			kill(s->procid[i], SIGUSR1);
+			kill(s->procID[i], SIGUSR1);
 		}
 	}
 

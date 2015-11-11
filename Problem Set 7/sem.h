@@ -11,7 +11,7 @@ int proc_num;
  * Struct defintion for a sem structure
  */
 struct sem {
-	char lock;
+	volatile char lock;
     int count;
     int proc_status[N_PROC];
     int procID[N_PROC];
