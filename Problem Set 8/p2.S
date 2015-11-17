@@ -10,6 +10,7 @@ _start:
 		movq $msg,%rsi				# message
 		movq $1,%rax				# sycall# for write
 		movq $1,%rbx				# write to stdout
-		SYSCALL						
-		#crashes because program tries to access memory that it does not have
-		#permission to access, generating a SIGSEGV
+		SYSCALL
+		movq $60,%rax				#id for sys_exit
+		movq $0,%rdi				#exit value
+		SYSCALL

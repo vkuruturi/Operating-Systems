@@ -14,7 +14,11 @@ p3: p3.S
 	as $(ASFLAGS) p3.o p3.S
 	ld $(LDFLAGS) p3 p3.o
 	rm p3.o
+
 p4: p4.S
 	as $(ASFLAGS) p4.o p4.S
 	ld $(LDFLAGS) p4 p4.o
 	rm p4.o
+
+p5: p5.c
+	$(CC) $(CFLAGS) p5 p5.c

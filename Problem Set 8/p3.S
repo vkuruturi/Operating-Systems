@@ -13,6 +13,6 @@ _start:
 		SYSCALL						
 
 		movq $60,%rax				# sys_exit
-		movq $0,%rdi				# with code 0
+		movq $1,%rdi				# with code 1
 		SYSCALL
 		
