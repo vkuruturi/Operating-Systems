@@ -2,10 +2,10 @@
 #define SCHED_H
 
 #define SCHED_NPROC  256 
-#define SCHED_READY 1
-#define SCHED_RUNNING 2
-#define SCHED_SLEEPING 3
-#define SCHED_ZOMBIE 4
+#define SCHED_READY 0
+#define SCHED_RUNNING 1
+#define SCHED_SLEEPING 2
+#define SCHED_ZOMBIE 3
 
 #define DEFAULT_PR 20
 
@@ -26,10 +26,10 @@ struct sched_proc
 	int state;			//Task state
 	int priority;		//Static priority, values from 0 to 39
 	int accumulated;	//Total time process running since startup
-	int CPUtime;		//
+	int CPUtime;		//how many ticks the process has had CPU for; resets when switched out
 	int exitcode;		//exit value of process.  set by sched_exit
 	int niceval;		//nice value, values from -20 to 19, default 0
-	int vruntime; 		//dynamic priority
+	int lastruntick;	// stores tick_count when process is switched out
 	struct savectx ctx; 
 	struct sched_proc *parent;		//Parent process
 

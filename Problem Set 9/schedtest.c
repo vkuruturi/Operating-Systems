@@ -53,14 +53,17 @@ parent_fn()
 	 case -1:fprintf(stderr,"Fork failed\n");
 		return;
 	 case 0:
+		fprintf(stderr, "in child 2\n");
 		child_fn2();
 		sched_exit(11);
 		fprintf(stderr,"!!BUG!! at %s:%d\n",__FILE__,__LINE__);
 		return;
 	 default:
 	 	fprintf(stderr, "waiting for child...\n");
-		while ((p=sched_wait(&y))>0)
+		while ((p=sched_wait(&y))>=0){
 			fprintf(stderr,"Child pid %d return code %d\n",p,y);
+			
+		}
 		return;
 	}
 }
